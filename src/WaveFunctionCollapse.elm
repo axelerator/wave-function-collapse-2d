@@ -2,7 +2,6 @@ module WaveFunctionCollapse exposing
     ( Direction(..)
     , Model
     , PropagationTile(..)
-    , RandomPick
     , TilesDefinition
     , done
     , init
@@ -74,7 +73,7 @@ propagate ((Model modelDetails) as model) =
                         Random.step (randomTileAndTileIdGen modelDetails) modelDetails.seed
 
                     withPick =
-                        pickRandom (RandomPick randomPick) modelDetails
+                        pickRandom randomPick modelDetails
                 in
                 Model
                     { withPick | seed = nextSeed }
@@ -248,7 +247,7 @@ nextCandidates { propGrid, tilesDefinition } =
 
 
 pickRandom : RandomPick -> ModelDetails tileT socketT -> ModelDetails tileT socketT
-pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
+pickRandom ( posRand, tileRand ) modelDetails =
     let
         candidates =
             nextCandidates modelDetails
@@ -330,8 +329,8 @@ processStep modelDetails step grid =
                     ( [], grid )
 
 
-type RandomPick
-    = RandomPick ( Int, Int )
+type alias RandomPick =
+    ( Int, Int )
 
 
 randomTileAndTileIdGen : ModelDetails tileT socketT -> Random.Generator ( Int, Int )
@@ -341,11 +340,6 @@ randomTileAndTileIdGen { tilesDefinition, propGrid } =
             Grid.width propGrid * Grid.height propGrid
     in
     Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tilesDefinition.tiles))
-
-
-mkRandom : (RandomPick -> msg) -> ModelDetails tileT socketT -> Cmd msg
-mkRandom mkMsg modelDetails =
-    Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen modelDetails)
 
 
 tileById : ModelDetails tileT socketT -> Int -> tileT
