@@ -17,7 +17,7 @@ module WaveFunctionCollapse exposing
 import Array
 import Grid exposing (Grid)
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Random
 import String exposing (fromInt)
@@ -365,7 +365,7 @@ tileById { tilesDefinition } i =
 
 
 viewPropGrid : (Pos -> TileId -> msg) -> (tileT -> Html msg) -> Model tileT socketT -> Html msg
-viewPropGrid pickMsg displayTile ((Model { propGrid, tilesDefinition }) as wfModel) =
+viewPropGrid pickMsg displayTile (Model { propGrid, tilesDefinition }) =
     let
         mkNum options pos i =
             let

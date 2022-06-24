@@ -1,12 +1,9 @@
 module Main exposing (..)
 
-import Array
 import Browser
-import Grid
-import Html exposing (Html, br, button, div, img, text)
-import Html.Attributes exposing (class, default, src, style)
+import Html exposing (Html, br, button, div, text)
+import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
-import Random
 import String exposing (fromInt)
 import Time
 import WaveFunctionCollapse exposing (..)
@@ -193,7 +190,7 @@ init _ =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Pick nextMode pos tileId ->
+        Pick _ pos tileId ->
             ( { model | wfModel = WaveFunctionCollapse.pickTile pos tileId model.wfModel }
             , Cmd.none
             )
