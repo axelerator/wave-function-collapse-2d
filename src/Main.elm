@@ -165,11 +165,11 @@ viewTiles =
         f i { filename } =
             div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] [ text <| fromInt i, br [] [], text filename ]
     in
-    div [ class "examples" ] <| List.indexedMap f tileImages
+    div [ class "examples" ] <| List.indexedMap f WaveFunctionCollapse.tileImages_
 
 
 viewPropGrid : WaveFunctionCollapse.Model -> Html Msg
-viewPropGrid (WaveFunctionCollapse.Model { propGrid }) =
+viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
     let
         rows =
             Grid.rows propGrid
@@ -189,15 +189,15 @@ viewPropGrid (WaveFunctionCollapse.Model { propGrid }) =
             case propTile of
                 Fixed i ->
                     let
-                        { filename } =
-                            tileById i
+                        filename =
+                            WaveFunctionCollapse.imageForTile wfModel i
                     in
                     div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] []
 
                 Superposition options ->
                     div [ class "superposition" ] <|
                         List.map (mkNum options ( col, row )) <|
-                            List.range 0 (List.length tileImages)
+                            List.range 0 (List.length WaveFunctionCollapse.tileImages_)
 
         viewRow row tiles =
             div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles

@@ -4,12 +4,13 @@ module WaveFunctionCollapse exposing
     , PropagationTile(..)
     , RandomPick
     , done
+    , imageForTile
     , init
     , pickTile
     , propagate
     , stopped
     , tileById
-    , tileImages
+    , tileImages_
     )
 
 import Grid exposing (Grid)
@@ -55,7 +56,7 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
         step :: otherSteps ->
             let
                 ( additionalSteps, nextGrid ) =
-                    processStep step modelDetails.propGrid
+                    processStep modelDetails step modelDetails.propGrid
             in
             ( Model
                 { modelDetails
@@ -85,14 +86,16 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
 init : Int -> Int -> Model
 init w h =
     Model
-        { propGrid = Grid.repeat w h superposition
+        { propGrid = Grid.repeat w h (superposition tileImages_)
         , openSteps = []
+        , tileImages = tileImages_
         }
 
 
 type alias ModelDetails =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
+    , tileImages : List TileImage
     }
 
 
@@ -107,8 +110,8 @@ type alias TileImage =
     }
 
 
-tileImages : List TileImage
-tileImages =
+tileImages_ : List TileImage
+tileImages_ =
     [ fullwall
     , fullsand
     , wall_bottom
@@ -229,8 +232,8 @@ type PropStep
     | KeepOnlyMatching Pos Pos
 
 
-superposition : PropagationTile
-superposition =
+superposition : List TileImage -> PropagationTile
+superposition tileImages =
     Superposition <| List.range 0 (List.length tileImages)
 
 
@@ -302,11 +305,11 @@ allDirections =
     [ Top, Left, Bottom, Right ]
 
 
-canDock : Direction -> Socket -> Int -> Bool
-canDock dockDir dockSocket dockTileId =
+canDock : ModelDetails -> Direction -> Socket -> Int -> Bool
+canDock modelDetails dockDir dockSocket dockTileId =
     let
         dockTile =
-            tileById dockTileId
+            tileById modelDetails dockTileId
 
         currentSocket =
             getSocketIn dockTile dockDir
@@ -321,7 +324,7 @@ type alias Candidate =
 
 
 nextCandidates : ModelDetails -> List Candidate
-nextCandidates { propGrid } =
+nextCandidates { propGrid, tileImages } =
     let
         gridWithIdx =
             Grid.indexedMap (\x y t -> ( x, y, t )) propGrid
@@ -388,8 +391,8 @@ pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
     }
 
 
-processStep : PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
-processStep step grid =
+processStep : ModelDetails -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
+processStep modelDetails step grid =
     case step of
         PickTile pos tileId ->
             let
@@ -418,13 +421,13 @@ processStep step grid =
                             findDirection from to
 
                         originTile =
-                            tileById originTileId
+                            tileById modelDetails originTileId
 
                         originSocket =
                             getSocketIn originTile dir
 
                         revisedOptions =
-                            List.filter (canDock (invert dir) originSocket) options
+                            List.filter (canDock modelDetails (invert dir) originSocket) options
 
                         updateGrid =
                             Grid.set to (Superposition revisedOptions) grid
@@ -440,7 +443,7 @@ type RandomPick
 
 
 randomTileAndTileIdGen : ModelDetails -> Random.Generator ( Int, Int )
-randomTileAndTileIdGen { propGrid } =
+randomTileAndTileIdGen { propGrid, tileImages } =
     let
         tileCount =
             Grid.width propGrid * Grid.height propGrid
@@ -453,8 +456,18 @@ mkRandom mkMsg modelDetails =
     Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen modelDetails)
 
 
-tileById : Int -> TileImage
-tileById i =
+imageForTile : Model -> Int -> String
+imageForTile (Model { tileImages }) i =
+    case List.head <| List.drop i tileImages of
+        Nothing ->
+            fullsand.filename
+
+        Just aTile ->
+            aTile.filename
+
+
+tileById : ModelDetails -> Int -> TileImage
+tileById { tileImages } i =
     case List.head <| List.drop i tileImages of
         Nothing ->
             fullsand
