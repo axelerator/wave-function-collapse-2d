@@ -72,8 +72,18 @@ update msg model =
             let
                 ( wfModel, cmd ) =
                     propagate GotRandom Nothing model.wfModel
+
+                mode =
+                    if WaveFunctionCollapse.done model.wfModel then
+                        Manual
+
+                    else
+                        model.mode
             in
-            ( { model | wfModel = wfModel }
+            ( { model
+                | wfModel = wfModel
+                , mode = mode
+              }
             , cmd
             )
 
