@@ -33,6 +33,87 @@ type Mode
     | AutoStep
 
 
+tileImages_ : List TileImage
+tileImages_ =
+    [ fullwall
+    , fullsand
+    , wall_bottom
+    , wall_left
+    , wall_right
+    , wall_top
+    , wall_top_left
+    , wall_top_right
+    , wall_bottom_left
+    , wall_bottom_right
+    ]
+
+
+mkTile : String -> TerrainType -> TerrainType -> TerrainType -> TerrainType -> TileImage
+mkTile filename t0 t1 t2 t3 =
+    { filename = filename
+    , sockets = mkSockets t0 t1 t2 t3
+    }
+
+
+mkSockets : TerrainType -> TerrainType -> TerrainType -> TerrainType -> Sockets
+mkSockets t0 t1 t2 t3 =
+    { top = ( t0, t3 )
+    , left = ( t0, t1 )
+    , bottom = ( t1, t2 )
+    , right = ( t3, t2 )
+    }
+
+
+fullwall : TileImage
+fullwall =
+    mkTile "full_wall.jpg" Wall Wall Wall Wall
+
+
+fullsand : TileImage
+fullsand =
+    mkTile "full_sand.jpg" Sand Sand Sand Sand
+
+
+wall_left : TileImage
+wall_left =
+    mkTile "wall_left.jpg" Wall Wall Sand Sand
+
+
+wall_right : TileImage
+wall_right =
+    mkTile "wall_right.jpg" Sand Sand Wall Wall
+
+
+wall_bottom : TileImage
+wall_bottom =
+    mkTile "wall_bottom.jpg" Sand Wall Wall Sand
+
+
+wall_top : TileImage
+wall_top =
+    mkTile "wall_top.jpg" Wall Sand Sand Wall
+
+
+wall_top_left : TileImage
+wall_top_left =
+    mkTile "wall_top_left.jpg" Wall Sand Sand Sand
+
+
+wall_top_right : TileImage
+wall_top_right =
+    mkTile "wall_top_right.jpg" Sand Sand Sand Wall
+
+
+wall_bottom_left : TileImage
+wall_bottom_left =
+    mkTile "wall_bottom_left.jpg" Sand Wall Sand Sand
+
+
+wall_bottom_right : TileImage
+wall_bottom_right =
+    mkTile "wall_bottom_right.jpg" Sand Sand Wall Sand
+
+
 
 -- MAIN
 
@@ -53,7 +134,7 @@ main =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { wfModel = WaveFunctionCollapse.init 5 5
+    ( { wfModel = WaveFunctionCollapse.init fullsand tileImages_ 5 5
       , mode = Manual
       , speed = 200
       }
@@ -165,7 +246,7 @@ viewTiles =
         f i { filename } =
             div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] [ text <| fromInt i, br [] [], text filename ]
     in
-    div [ class "examples" ] <| List.indexedMap f WaveFunctionCollapse.tileImages_
+    div [ class "examples" ] <| List.indexedMap f tileImages_
 
 
 viewPropGrid : WaveFunctionCollapse.Model -> Html Msg
@@ -197,7 +278,7 @@ viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
                 Superposition options ->
                     div [ class "superposition" ] <|
                         List.map (mkNum options ( col, row )) <|
-                            List.range 0 (List.length WaveFunctionCollapse.tileImages_)
+                            List.range 0 (List.length tileImages_)
 
         viewRow row tiles =
             div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles

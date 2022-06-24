@@ -3,6 +3,10 @@ module WaveFunctionCollapse exposing
     , ModelDetails
     , PropagationTile(..)
     , RandomPick
+    , Socket
+    , Sockets
+    , TerrainType(..)
+    , TileImage
     , done
     , imageForTile
     , init
@@ -10,11 +14,11 @@ module WaveFunctionCollapse exposing
     , propagate
     , stopped
     , tileById
-    , tileImages_
     )
 
 import Grid exposing (Grid)
 import Html exposing (option)
+import Html.Attributes exposing (default)
 import Html.Events exposing (custom)
 import Random
 
@@ -83,12 +87,13 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
                 ( model, Cmd.none )
 
 
-init : Int -> Int -> Model
-init w h =
+init : TileImage -> List TileImage -> Int -> Int -> Model
+init defaultTile tileImages w h =
     Model
-        { propGrid = Grid.repeat w h (superposition tileImages_)
+        { propGrid = Grid.repeat w h (superposition tileImages)
         , openSteps = []
-        , tileImages = tileImages_
+        , tileImages = tileImages
+        , defaultTile = defaultTile
         }
 
 
@@ -96,6 +101,7 @@ type alias ModelDetails =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
     , tileImages : List TileImage
+    , defaultTile : TileImage
     }
 
 
@@ -108,21 +114,6 @@ type alias TileImage =
     { filename : String
     , sockets : Sockets
     }
-
-
-tileImages_ : List TileImage
-tileImages_ =
-    [ fullwall
-    , fullsand
-    , wall_bottom
-    , wall_left
-    , wall_right
-    , wall_top
-    , wall_top_left
-    , wall_top_right
-    , wall_bottom_left
-    , wall_bottom_right
-    ]
 
 
 type Direction
@@ -142,72 +133,6 @@ type alias Sockets =
     , bottom : Socket
     , right : Socket
     }
-
-
-mkTile : String -> TerrainType -> TerrainType -> TerrainType -> TerrainType -> TileImage
-mkTile filename t0 t1 t2 t3 =
-    { filename = filename
-    , sockets = mkSockets t0 t1 t2 t3
-    }
-
-
-mkSockets : TerrainType -> TerrainType -> TerrainType -> TerrainType -> Sockets
-mkSockets t0 t1 t2 t3 =
-    { top = ( t0, t3 )
-    , left = ( t0, t1 )
-    , bottom = ( t1, t2 )
-    , right = ( t3, t2 )
-    }
-
-
-fullwall : TileImage
-fullwall =
-    mkTile "full_wall.jpg" Wall Wall Wall Wall
-
-
-fullsand : TileImage
-fullsand =
-    mkTile "full_sand.jpg" Sand Sand Sand Sand
-
-
-wall_left : TileImage
-wall_left =
-    mkTile "wall_left.jpg" Wall Wall Sand Sand
-
-
-wall_right : TileImage
-wall_right =
-    mkTile "wall_right.jpg" Sand Sand Wall Wall
-
-
-wall_bottom : TileImage
-wall_bottom =
-    mkTile "wall_bottom.jpg" Sand Wall Wall Sand
-
-
-wall_top : TileImage
-wall_top =
-    mkTile "wall_top.jpg" Wall Sand Sand Wall
-
-
-wall_top_left : TileImage
-wall_top_left =
-    mkTile "wall_top_left.jpg" Wall Sand Sand Sand
-
-
-wall_top_right : TileImage
-wall_top_right =
-    mkTile "wall_top_right.jpg" Sand Sand Sand Wall
-
-
-wall_bottom_left : TileImage
-wall_bottom_left =
-    mkTile "wall_bottom_left.jpg" Sand Wall Sand Sand
-
-
-wall_bottom_right : TileImage
-wall_bottom_right =
-    mkTile "wall_bottom_right.jpg" Sand Sand Wall Sand
 
 
 type PropagationTile
@@ -457,20 +382,20 @@ mkRandom mkMsg modelDetails =
 
 
 imageForTile : Model -> Int -> String
-imageForTile (Model { tileImages }) i =
+imageForTile (Model { defaultTile, tileImages }) i =
     case List.head <| List.drop i tileImages of
         Nothing ->
-            fullsand.filename
+            defaultTile.filename
 
         Just aTile ->
             aTile.filename
 
 
 tileById : ModelDetails -> Int -> TileImage
-tileById { tileImages } i =
+tileById { tileImages, defaultTile } i =
     case List.head <| List.drop i tileImages of
         Nothing ->
-            fullsand
+            defaultTile
 
         Just aTile ->
             aTile
