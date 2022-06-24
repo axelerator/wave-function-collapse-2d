@@ -1,10 +1,9 @@
 module WaveFunctionCollapse exposing
-    ( Model(..)
+    ( Direction(..)
+    , Model(..)
     , ModelDetails
     , PropagationTile(..)
     , RandomPick
-    , Socket
-    , Sockets
     , TerrainType(..)
     , TilesDefinition
     , done
@@ -19,11 +18,11 @@ import Grid exposing (Grid)
 import Random
 
 
-type Model tileT
-    = Model (ModelDetails tileT)
+type Model tileT socketT
+    = Model (ModelDetails tileT socketT)
 
 
-pickTile : Pos -> TileId -> Model tileT -> Model tileT
+pickTile : Pos -> TileId -> Model tileT socketT -> Model tileT socketT
 pickTile pos tileId (Model model) =
     Model
         { model
@@ -31,12 +30,12 @@ pickTile pos tileId (Model model) =
         }
 
 
-stopped : Model tileT -> Bool
+stopped : Model tileT socketT -> Bool
 stopped (Model { openSteps }) =
     List.isEmpty openSteps
 
 
-done : Model tileT -> Bool
+done : Model tileT socketT -> Bool
 done (Model { propGrid }) =
     let
         f t onlyFixedTiles =
@@ -50,7 +49,7 @@ done (Model { propGrid }) =
     Grid.foldr f True propGrid
 
 
-propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model tileT -> ( Model tileT, Cmd msg )
+propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model tileT socketT -> ( Model tileT socketT, Cmd msg )
 propagate requestRandom maybeRandom ((Model modelDetails) as model) =
     case modelDetails.openSteps of
         step :: otherSteps ->
@@ -83,16 +82,16 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
                 ( model, Cmd.none )
 
 
-type alias TilesDefinition tileT =
+type alias TilesDefinition tileT socketT =
     { defaultTile : tileT
     , tiles : List tileT
     , width : Int
     , height : Int
-    , socketsFor : tileT -> Sockets
+    , getSocketIn : tileT -> Direction -> socketT
     }
 
 
-init : TilesDefinition tileT -> Model tileT
+init : TilesDefinition tileT socketT -> Model tileT socketT
 init ({ width, height, tiles } as tilesDefinition) =
     Model
         { propGrid = Grid.repeat width height (superposition tiles)
@@ -101,10 +100,10 @@ init ({ width, height, tiles } as tilesDefinition) =
         }
 
 
-type alias ModelDetails tileT =
+type alias ModelDetails tileT socketT =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
-    , tilesDefinition : TilesDefinition tileT
+    , tilesDefinition : TilesDefinition tileT socketT
     }
 
 
@@ -118,18 +117,6 @@ type Direction
     | Left
     | Bottom
     | Right
-
-
-type alias Socket =
-    ( TerrainType, TerrainType )
-
-
-type alias Sockets =
-    { top : Socket
-    , left : Socket
-    , bottom : Socket
-    , right : Socket
-    }
 
 
 type PropagationTile
@@ -174,26 +161,6 @@ findDirection ( x0, y0 ) ( x1, y1 ) =
         Left
 
 
-getSocketIn : TilesDefinition tileT -> tileT -> Direction -> Socket
-getSocketIn { socketsFor } tileImage dir =
-    let
-        sockets =
-            socketsFor tileImage
-    in
-    case dir of
-        Top ->
-            sockets.top
-
-        Left ->
-            sockets.left
-
-        Bottom ->
-            sockets.bottom
-
-        Right ->
-            sockets.right
-
-
 posInDir : Direction -> Pos -> Pos
 posInDir dir ( x, y ) =
     case dir of
@@ -231,14 +198,14 @@ allDirections =
     [ Top, Left, Bottom, Right ]
 
 
-canDock : ModelDetails tileT -> Direction -> Socket -> Int -> Bool
+canDock : ModelDetails tileT socketT -> Direction -> socketT -> Int -> Bool
 canDock modelDetails dockDir dockSocket dockTileId =
     let
         dockTile =
             tileById modelDetails dockTileId
 
         currentSocket =
-            getSocketIn modelDetails.tilesDefinition dockTile dockDir
+            modelDetails.tilesDefinition.getSocketIn dockTile dockDir
     in
     currentSocket == dockSocket
 
@@ -249,7 +216,7 @@ type alias Candidate =
     }
 
 
-nextCandidates : ModelDetails tileT -> List Candidate
+nextCandidates : ModelDetails tileT socketT -> List Candidate
 nextCandidates { propGrid, tilesDefinition } =
     let
         gridWithIdx =
@@ -281,7 +248,7 @@ nextCandidates { propGrid, tilesDefinition } =
     Tuple.first <| Grid.foldr f ( [], List.length tilesDefinition.tiles ) gridWithIdx
 
 
-pickRandom : RandomPick -> ModelDetails tileT -> ModelDetails tileT
+pickRandom : RandomPick -> ModelDetails tileT socketT -> ModelDetails tileT socketT
 pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
     let
         candidates =
@@ -317,7 +284,7 @@ pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
     }
 
 
-processStep : ModelDetails tileT -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
+processStep : ModelDetails tileT socketT -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
 processStep modelDetails step grid =
     case step of
         PickTile pos tileId ->
@@ -350,7 +317,7 @@ processStep modelDetails step grid =
                             tileById modelDetails originTileId
 
                         originSocket =
-                            getSocketIn modelDetails.tilesDefinition originTile dir
+                            modelDetails.tilesDefinition.getSocketIn originTile dir
 
                         revisedOptions =
                             List.filter (canDock modelDetails (invert dir) originSocket) options
@@ -368,7 +335,7 @@ type RandomPick
     = RandomPick ( Int, Int )
 
 
-randomTileAndTileIdGen : ModelDetails tileT -> Random.Generator ( Int, Int )
+randomTileAndTileIdGen : ModelDetails tileT socketT -> Random.Generator ( Int, Int )
 randomTileAndTileIdGen { tilesDefinition, propGrid } =
     let
         tileCount =
@@ -377,12 +344,12 @@ randomTileAndTileIdGen { tilesDefinition, propGrid } =
     Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tilesDefinition.tiles))
 
 
-mkRandom : (RandomPick -> msg) -> ModelDetails tileT -> Cmd msg
+mkRandom : (RandomPick -> msg) -> ModelDetails tileT socketT -> Cmd msg
 mkRandom mkMsg modelDetails =
     Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen modelDetails)
 
 
-tileById : ModelDetails tileT -> Int -> tileT
+tileById : ModelDetails tileT socketT -> Int -> tileT
 tileById { tilesDefinition } i =
     case List.head <| List.drop i tilesDefinition.tiles of
         Nothing ->

@@ -22,7 +22,7 @@ type Msg
 
 
 type alias Model =
-    { wfModel : WaveFunctionCollapse.Model Tile
+    { wfModel : WaveFunctionCollapse.Model Tile Socket
     , mode : Mode
     , speed : Int
     }
@@ -37,6 +37,18 @@ type alias Tile =
     { filename : String
     , sockets : Sockets
     }
+
+
+type alias Sockets =
+    { top : Socket
+    , left : Socket
+    , bottom : Socket
+    , right : Socket
+    }
+
+
+type alias Socket =
+    ( TerrainType, TerrainType )
 
 
 tileImages_ : List Tile
@@ -138,14 +150,30 @@ main =
 -- MODEL
 
 
-tilesDefinition : TilesDefinition Tile
+tilesDefinition : TilesDefinition Tile Socket
 tilesDefinition =
     { defaultTile = fullsand
     , tiles = tileImages_
     , width = 5
     , height = 5
-    , socketsFor = \tile -> tile.sockets
+    , getSocketIn = getSocketIn
     }
+
+
+getSocketIn : Tile -> Direction -> Socket
+getSocketIn { sockets } dir =
+    case dir of
+        Top ->
+            sockets.top
+
+        Left ->
+            sockets.left
+
+        Bottom ->
+            sockets.bottom
+
+        Right ->
+            sockets.right
 
 
 init : () -> ( Model, Cmd Msg )
@@ -265,7 +293,7 @@ viewTiles =
     div [ class "examples" ] <| List.indexedMap f tileImages_
 
 
-viewPropGrid : WaveFunctionCollapse.Model Tile -> Html Msg
+viewPropGrid : WaveFunctionCollapse.Model Tile Socket -> Html Msg
 viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
     let
         rows =
