@@ -28,6 +28,11 @@ type alias Model =
     }
 
 
+type Mode
+    = Manual
+    | AutoStep
+
+
 
 -- MAIN
 

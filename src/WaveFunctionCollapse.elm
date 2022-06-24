@@ -1,4 +1,16 @@
-module WaveFunctionCollapse exposing (..)
+module WaveFunctionCollapse exposing
+    ( Model(..)
+    , ModelDetails
+    , PropagationTile(..)
+    , RandomPick
+    , done
+    , init
+    , pickTile
+    , propagate
+    , stopped
+    , tileById
+    , tileImages
+    )
 
 import Grid exposing (Grid)
 import Html exposing (option)
@@ -70,12 +82,6 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
                 ( model, Cmd.none )
 
 
-type alias ModelDetails =
-    { propGrid : PropagationGrid
-    , openSteps : List PropStep
-    }
-
-
 init : Int -> Int -> Model
 init w h =
     Model
@@ -84,9 +90,10 @@ init w h =
         }
 
 
-type Mode
-    = Manual
-    | AutoStep
+type alias ModelDetails =
+    { propGrid : PropagationGrid
+    , openSteps : List PropStep
+    }
 
 
 type TerrainType
