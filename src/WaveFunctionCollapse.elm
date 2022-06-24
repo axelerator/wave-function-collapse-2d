@@ -1,17 +1,29 @@
 module WaveFunctionCollapse exposing
-    ( Direction(..)
-    , Model
-    , PropagationTile(..)
-    , TilesDefinition
-    , done
-    , init
-    , pickTile
-    , propagate
-    , solve
-    , stopped
-    , tileById
-    , viewPropGrid
+    ( TilesDefinition, Direction(..), Model, TileId
+    , init, solve
+    , pickTile, propagate, done, viewPropGrid
     )
+
+{-| This library allows user to create a random two dimensional map/grid/board
+based on custom "tiles". The user has to specify what "sockets" each tile
+is exposing at each edge/direction to determine whether they can be placed next to each other.
+
+
+# Definition
+
+@docs TilesDefinition, Direction, Model, TileId
+
+
+# Solving
+
+@docs init, solve
+
+
+# Stepping, Visualizing
+
+@docs pickTile, propagate, done, viewPropGrid
+
+-}
 
 import Array
 import Grid exposing (Grid)
@@ -22,10 +34,71 @@ import Random exposing (Seed)
 import String exposing (fromInt)
 
 
+{-| A `TilesDefinition` contains all the necessary information to
+describe what kind of map/grid/board is to be generated.
+User can user their own type of `tiles`. But they must provide a
+`getSocketIn` function that returns what kind of `socket` each tile
+exposes in a certain direction.
+
+The `initialSeed` determines the generation of the pseudo random numbers
+used to pick tiles. So to get different results you can seed it for example
+with the current timestamp.
+
+-}
+type alias TilesDefinition tileT socketT =
+    { defaultTile : tileT
+    , tiles : List tileT
+    , width : Int
+    , height : Int
+    , getSocketIn : tileT -> Direction -> socketT
+    , initialSeed : Seed
+    }
+
+
+{-| Specifies direction in which another tile can be placed relative to the current tile
+-}
+type Direction
+    = Top
+    | Left
+    | Bottom
+    | Right
+
+
+{-| The init function creates an empty model based on the given `TilesDefinition`.
+This model can then either be populated step by step with `propagate` or
+filled in one call with the `solve` function.
+-}
+init : TilesDefinition tileT socketT -> Model tileT socketT
+init ({ width, height, tiles } as tilesDefinition) =
+    Model
+        { propGrid = Grid.repeat width height (superposition tiles)
+        , openSteps = []
+        , tilesDefinition = tilesDefinition
+        , seed = tilesDefinition.initialSeed
+        }
+
+
+{-| The position/index of a tile in the initial list of tiles (given with the `TilesDefinition`)
+-}
+type alias TileId =
+    Int
+
+
+{-| Represents the working state of a two dimensional map/board.
+Unless it's `done` this will have positions that have not been
+assigned to a tile yet.
+
+`tileT` is the type for the tiles used to "fill" the map.
+`socketT` is a type that describes the "edge" of a tile in a certain `Direction`.
+The sockets have to match in order for two tiles to be positioned next to each other.
+
+-}
 type Model tileT socketT
     = Model (ModelDetails tileT socketT)
 
 
+{-| Adds a step to pick a specific tile at a specific position
+-}
 pickTile : Pos -> TileId -> Model tileT socketT -> Model tileT socketT
 pickTile pos tileId (Model model) =
     Model
@@ -34,14 +107,14 @@ pickTile pos tileId (Model model) =
         }
 
 
-stopped : Model tileT socketT -> Bool
-stopped (Model { openSteps }) =
-    List.isEmpty openSteps
-
-
+{-| Returns true if all positions in the grid have a tile assigned
+-}
 done : Model tileT socketT -> Bool
 done ((Model { propGrid }) as model) =
     let
+        stopped (Model { openSteps }) =
+            List.isEmpty openSteps
+
         f t onlyFixedTiles =
             case t of
                 Superposition _ ->
@@ -53,6 +126,8 @@ done ((Model { propGrid }) as model) =
     stopped model && Grid.foldr f True propGrid
 
 
+{-| Tries to solve/fill the whole grid in one go by assigning a tile to each position.
+-}
 solve : Model tileT socketT -> Model tileT socketT
 solve model =
     if done model then
@@ -62,6 +137,9 @@ solve model =
         solve <| propagate model
 
 
+{-| Execute a single step. This can mean picking the next random tile
+or propagating restrictions resulting from the last placement of a tile.
+-}
 propagate : Model tileT socketT -> Model tileT socketT
 propagate ((Model modelDetails) as model) =
     case modelDetails.openSteps of
@@ -92,24 +170,49 @@ propagate ((Model modelDetails) as model) =
                 model
 
 
-type alias TilesDefinition tileT socketT =
-    { defaultTile : tileT
-    , tiles : List tileT
-    , width : Int
-    , height : Int
-    , getSocketIn : tileT -> Direction -> socketT
-    , initialSeed : Seed
-    }
+{-| Returns a Html representation of the internal state while assigning the tiles
+It will let the user pick tiles manually and requires a function to generate a message for that.
+It also needs a function to render a Html representation of a tile (since it's type is only known
+to the app).
+For positions that have not been assigned a tile yet this will show which tile (ids) can still be picked.
+-}
+viewPropGrid : (Pos -> TileId -> msg) -> (tileT -> Html msg) -> Model tileT socketT -> Html msg
+viewPropGrid pickMsg displayTile (Model { propGrid, tilesDefinition }) =
+    let
+        mkNum options pos i =
+            let
+                attrs =
+                    if List.member i options then
+                        [ onClick (pickMsg pos i) ]
+
+                    else
+                        [ class "off" ]
+            in
+            div attrs [ text <| fromInt i ]
+
+        viewTile row col propTile =
+            case propTile of
+                Fixed i ->
+                    case List.head <| List.drop i tilesDefinition.tiles of
+                        Just aTile ->
+                            displayTile aTile
+
+                        _ ->
+                            displayTile tilesDefinition.defaultTile
+
+                Superposition options ->
+                    div [ class "superposition" ] <|
+                        List.map (mkNum options ( col, row )) <|
+                            List.range 0 (List.length tilesDefinition.tiles)
+
+        viewRow row tiles =
+            div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles
+    in
+    div [] <| Array.toList <| Array.indexedMap viewRow <| Grid.rows propGrid
 
 
-init : TilesDefinition tileT socketT -> Model tileT socketT
-init ({ width, height, tiles } as tilesDefinition) =
-    Model
-        { propGrid = Grid.repeat width height (superposition tiles)
-        , openSteps = []
-        , tilesDefinition = tilesDefinition
-        , seed = tilesDefinition.initialSeed
-        }
+
+-- Internals
 
 
 type alias ModelDetails tileT socketT =
@@ -120,13 +223,6 @@ type alias ModelDetails tileT socketT =
     }
 
 
-type Direction
-    = Top
-    | Left
-    | Bottom
-    | Right
-
-
 type PropagationTile
     = Fixed TileId
     | Superposition (List TileId)
@@ -134,10 +230,6 @@ type PropagationTile
 
 type alias PropagationGrid =
     Grid PropagationTile
-
-
-type alias TileId =
-    Int
 
 
 type alias Pos =
@@ -360,38 +452,3 @@ tileById { tilesDefinition } i =
 
         Just aTile ->
             aTile
-
-
-viewPropGrid : (Pos -> TileId -> msg) -> (tileT -> Html msg) -> Model tileT socketT -> Html msg
-viewPropGrid pickMsg displayTile (Model { propGrid, tilesDefinition }) =
-    let
-        mkNum options pos i =
-            let
-                attrs =
-                    if List.member i options then
-                        [ onClick (pickMsg pos i) ]
-
-                    else
-                        [ class "off" ]
-            in
-            div attrs [ text <| fromInt i ]
-
-        viewTile row col propTile =
-            case propTile of
-                Fixed i ->
-                    case List.head <| List.drop i tilesDefinition.tiles of
-                        Just aTile ->
-                            displayTile aTile
-
-                        _ ->
-                            displayTile tilesDefinition.defaultTile
-
-                Superposition options ->
-                    div [ class "superposition" ] <|
-                        List.map (mkNum options ( col, row )) <|
-                            List.range 0 (List.length tilesDefinition.tiles)
-
-        viewRow row tiles =
-            div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles
-    in
-    div [] <| Array.toList <| Array.indexedMap viewRow <| Grid.rows propGrid

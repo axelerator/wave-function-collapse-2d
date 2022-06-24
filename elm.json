@@ -1,0 +1,24 @@
+{
+    "type": "package",
+    "source-directories": [
+        "src"
+    ],
+    "name": "axelerator/wave-function-collapse-2d",
+    "summary": "Random maps from custom tiles using the wave function collapse algorithm",
+    "license": "MIT",
+    "version": "1.0.0",
+    "exposed-modules": [
+        "WaveFunctionCollapse"
+    ],
+    "elm-version": "0.19.1 <= v < 0.20.0",
+    "dependencies": {
+            "LesleyLai/elm-grid": "1.0.1 <= v < 2.0.0",
+            "elm/browser": "1.0.1 <= v < 2.0.0",
+            "elm/core": "1.0.5 <= v < 2.0.0",
+            "elm/html": "1.0.0 <= v < 2.0.0",
+            "elm/random": "1.0.0 <= v < 2.0.0",
+            "elm/time": "1.0.0 <= v < 2.0.0",
+            "elm-community/list-extra": "8.5.2 <= v < 9.0.0"
+    },
+    "test-dependencies": {}
+}
