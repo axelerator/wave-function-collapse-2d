@@ -8,6 +8,14 @@
     margin: 0;
 }
 
+.splitView {
+  display: flex;
+}
+
+.splitView > * {
+  margin: 1em;
+}
+
 .row {
   display: flex
 }

@@ -28,7 +28,7 @@ is exposing at each edge/direction to determine whether they can be placed next 
 import Array
 import Grid exposing (Grid)
 import Html exposing (Html, div, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, property)
 import Html.Events exposing (onClick)
 import Random exposing (Seed)
 import String exposing (fromInt)
@@ -128,13 +128,30 @@ done ((Model { propGrid }) as model) =
 
 {-| Tries to solve/fill the whole grid in one go by assigning a tile to each position.
 -}
-solve : Model tileT socketT -> Model tileT socketT
-solve model =
+solve : TilesDefinition tileT socketT -> Grid tileT
+solve tilesDefinition =
+    let
+        (Model { propGrid }) =
+            solve_ <| propagate <| init tilesDefinition
+
+        convert propagationTile =
+            case propagationTile of
+                Fixed tileId ->
+                    listAtWithDefault tilesDefinition.defaultTile tileId tilesDefinition.tiles
+
+                Superposition _ ->
+                    tilesDefinition.defaultTile
+    in
+    Grid.map convert propGrid
+
+
+solve_ : Model tileT socketT -> Model tileT socketT
+solve_ model =
     if done model then
         model
 
     else
-        solve <| propagate model
+        solve_ <| propagate model
 
 
 {-| Execute a single step. This can mean picking the next random tile
@@ -361,13 +378,21 @@ pickRandom ( posRand, tileRand ) modelDetails =
             else
                 let
                     randomCandidate =
-                        List.head <| List.drop (modBy (List.length candidates) posRand) candidates
+                        if List.isEmpty candidates then
+                            Nothing
+
+                        else
+                            List.head <| List.drop (modBy (List.length candidates) posRand) candidates
                 in
                 case randomCandidate of
                     Just { pos, options } ->
                         let
                             randomTileId =
-                                List.head <| List.drop (modBy (List.length options) tileRand) options
+                                if List.isEmpty options then
+                                    Nothing
+
+                                else
+                                    List.head <| List.drop (modBy (List.length options) tileRand) options
                         in
                         case randomTileId of
                             Just tileId ->
@@ -452,3 +477,13 @@ tileById { tilesDefinition } i =
 
         Just aTile ->
             aTile
+
+
+listAtWithDefault : a -> Int -> List a -> a
+listAtWithDefault default idx list =
+    case List.head <| List.drop idx list of
+        Just a ->
+            a
+
+        Nothing ->
+            default

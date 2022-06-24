@@ -1,11 +1,14 @@
 module Main exposing (..)
 
+import Array
 import Browser
+import Grid exposing (Grid)
 import Html exposing (Html, br, button, div, text)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
-import Random
+import Random exposing (initialSeed)
 import String exposing (fromInt)
+import Task
 import Time
 import WaveFunctionCollapse exposing (..)
 
@@ -17,10 +20,12 @@ type Msg
     | Faster
     | Slower
     | Solve
+    | GotTime Time.Posix
 
 
 type alias Model =
     { wfModel : WaveFunctionCollapse.Model Tile Socket
+    , solved : Maybe (Grid Tile)
     , mode : Mode
     , speed : Int
     }
@@ -185,6 +190,7 @@ init _ =
     ( { wfModel = WaveFunctionCollapse.init tilesDefinition
       , mode = Manual
       , speed = 200
+      , solved = Nothing
       }
     , Cmd.none
     )
@@ -237,7 +243,21 @@ update msg model =
             )
 
         Solve ->
-            ( { model | wfModel = solve model.wfModel }
+            ( model
+            , Task.perform GotTime <| Time.now
+            )
+
+        GotTime posix ->
+            let
+                seed =
+                    Random.initialSeed <| Time.posixToMillis posix
+
+                tilesDefinitionWithSeed =
+                    { tilesDefinition
+                        | initialSeed = seed
+                    }
+            in
+            ( { model | solved = Just <| solve tilesDefinitionWithSeed }
             , Cmd.none
             )
 
@@ -262,6 +282,17 @@ subscriptions { mode, speed } =
 
 view : Model -> Html Msg
 view model =
+    div []
+        [ div [ class "splitView" ]
+            [ stepView model
+            , viewSolved model.solved
+            ]
+        , viewTiles
+        ]
+
+
+stepView : Model -> Html Msg
+stepView model =
     let
         modeView =
             case model.mode of
@@ -270,6 +301,9 @@ view model =
 
                 Manual ->
                     text "Stopped"
+
+        displayTileImage { filename } =
+            div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] []
     in
     div []
         [ div []
@@ -277,16 +311,10 @@ view model =
             , button [ onClick Play ] [ text "play ", text <| fromInt model.speed ]
             , button [ onClick Slower ] [ text "-" ]
             , button [ onClick Faster ] [ text "+" ]
-            , button [ onClick Solve ] [ text "solve" ]
             , modeView
             ]
         , viewPropGrid (Pick Manual) displayTileImage model.wfModel
-        , viewTiles
         ]
-
-
-displayTileImage { filename } =
-    div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] []
 
 
 viewTiles : Html msg
@@ -306,3 +334,28 @@ imageForTile i =
 
         Just aTile ->
             aTile.filename
+
+
+viewSolved : Maybe (Grid Tile) -> Html Msg
+viewSolved solved =
+    let
+        viewTile tile =
+            div
+                [ style "background-image" ("url(assets/tiles/" ++ tile.filename ++ ")") ]
+                []
+
+        viewRow tiles =
+            div [ class "row" ] <| Array.toList <| Array.map viewTile tiles
+
+        rows =
+            case solved of
+                Just grid ->
+                    Array.toList <| Array.map viewRow <| Grid.rows grid
+
+                Nothing ->
+                    []
+    in
+    div []
+        [ button [ onClick Solve ] [ text "solve" ]
+        , div [] rows
+        ]
