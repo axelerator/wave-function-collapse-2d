@@ -6,7 +6,7 @@ module WaveFunctionCollapse exposing
     , Socket
     , Sockets
     , TerrainType(..)
-    , TileImage
+    , Tile
     , TilesDefinition
     , done
     , init
@@ -20,11 +20,11 @@ import Grid exposing (Grid)
 import Random
 
 
-type Model tileImageT
-    = Model (ModelDetails tileImageT)
+type Model tileT
+    = Model (ModelDetails tileT)
 
 
-pickTile : Pos -> TileId -> Model tileImageT -> Model tileImageT
+pickTile : Pos -> TileId -> Model tileT -> Model tileT
 pickTile pos tileId (Model model) =
     Model
         { model
@@ -32,12 +32,12 @@ pickTile pos tileId (Model model) =
         }
 
 
-stopped : Model tileImageT -> Bool
+stopped : Model tileT -> Bool
 stopped (Model { openSteps }) =
     List.isEmpty openSteps
 
 
-done : Model tileImageT -> Bool
+done : Model tileT -> Bool
 done (Model { propGrid }) =
     let
         f t onlyFixedTiles =
@@ -51,7 +51,7 @@ done (Model { propGrid }) =
     Grid.foldr f True propGrid
 
 
-propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model tileImageT -> ( Model tileImageT, Cmd msg )
+propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model tileT -> ( Model tileT, Cmd msg )
 propagate requestRandom maybeRandom ((Model modelDetails) as model) =
     case modelDetails.openSteps of
         step :: otherSteps ->
@@ -84,16 +84,16 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
                 ( model, Cmd.none )
 
 
-type alias TilesDefinition tileImageT =
-    { defaultTile : tileImageT
-    , tileImages : List tileImageT
+type alias TilesDefinition tileT =
+    { defaultTile : tileT
+    , tileImages : List tileT
     , width : Int
     , height : Int
-    , socketsFor : tileImageT -> Sockets
+    , socketsFor : tileT -> Sockets
     }
 
 
-init : TilesDefinition tileImageT -> Model tileImageT
+init : TilesDefinition tileT -> Model tileT
 init ({ defaultTile, tileImages, width, height } as tilesDefinition) =
     Model
         { propGrid = Grid.repeat width height (superposition tileImages)
@@ -104,12 +104,12 @@ init ({ defaultTile, tileImages, width, height } as tilesDefinition) =
         }
 
 
-type alias ModelDetails tileImageT =
+type alias ModelDetails tileT =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
-    , tileImages : List tileImageT
-    , defaultTile : tileImageT
-    , tilesDefinition : TilesDefinition tileImageT
+    , tileImages : List tileT
+    , defaultTile : tileT
+    , tilesDefinition : TilesDefinition tileT
     }
 
 
@@ -118,7 +118,7 @@ type TerrainType
     | Wall
 
 
-type alias TileImage =
+type alias Tile =
     { filename : String
     , sockets : Sockets
     }
@@ -165,7 +165,7 @@ type PropStep
     | KeepOnlyMatching Pos Pos
 
 
-superposition : List tileImageT -> PropagationTile
+superposition : List tileT -> PropagationTile
 superposition tileImages =
     Superposition <| List.range 0 (List.length tileImages)
 
@@ -185,7 +185,7 @@ findDirection ( x0, y0 ) ( x1, y1 ) =
         Left
 
 
-getSocketIn : TilesDefinition tileImageT -> tileImageT -> Direction -> Socket
+getSocketIn : TilesDefinition tileT -> tileT -> Direction -> Socket
 getSocketIn { socketsFor } tileImage dir =
     let
         sockets =
@@ -242,7 +242,7 @@ allDirections =
     [ Top, Left, Bottom, Right ]
 
 
-canDock : ModelDetails tileImageT -> Direction -> Socket -> Int -> Bool
+canDock : ModelDetails tileT -> Direction -> Socket -> Int -> Bool
 canDock modelDetails dockDir dockSocket dockTileId =
     let
         dockTile =
@@ -260,7 +260,7 @@ type alias Candidate =
     }
 
 
-nextCandidates : ModelDetails tileImageT -> List Candidate
+nextCandidates : ModelDetails tileT -> List Candidate
 nextCandidates { propGrid, tileImages } =
     let
         gridWithIdx =
@@ -292,7 +292,7 @@ nextCandidates { propGrid, tileImages } =
     Tuple.first <| Grid.foldr f ( [], List.length tileImages ) gridWithIdx
 
 
-pickRandom : RandomPick -> ModelDetails tileImageT -> ModelDetails tileImageT
+pickRandom : RandomPick -> ModelDetails tileT -> ModelDetails tileT
 pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
     let
         candidates =
@@ -328,7 +328,7 @@ pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
     }
 
 
-processStep : ModelDetails tileImageT -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
+processStep : ModelDetails tileT -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
 processStep modelDetails step grid =
     case step of
         PickTile pos tileId ->
@@ -379,7 +379,7 @@ type RandomPick
     = RandomPick ( Int, Int )
 
 
-randomTileAndTileIdGen : ModelDetails tileImageT -> Random.Generator ( Int, Int )
+randomTileAndTileIdGen : ModelDetails tileT -> Random.Generator ( Int, Int )
 randomTileAndTileIdGen { propGrid, tileImages } =
     let
         tileCount =
@@ -388,12 +388,12 @@ randomTileAndTileIdGen { propGrid, tileImages } =
     Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tileImages))
 
 
-mkRandom : (RandomPick -> msg) -> ModelDetails tileImageT -> Cmd msg
+mkRandom : (RandomPick -> msg) -> ModelDetails tileT -> Cmd msg
 mkRandom mkMsg modelDetails =
     Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen modelDetails)
 
 
-tileById : ModelDetails tileImageT -> Int -> tileImageT
+tileById : ModelDetails tileT -> Int -> tileT
 tileById { tileImages, defaultTile } i =
     case List.head <| List.drop i tileImages of
         Nothing ->

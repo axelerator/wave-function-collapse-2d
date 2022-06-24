@@ -22,7 +22,7 @@ type Msg
 
 
 type alias Model =
-    { wfModel : WaveFunctionCollapse.Model TileImage
+    { wfModel : WaveFunctionCollapse.Model Tile
     , mode : Mode
     , speed : Int
     }
@@ -33,7 +33,7 @@ type Mode
     | AutoStep
 
 
-tileImages_ : List TileImage
+tileImages_ : List Tile
 tileImages_ =
     [ fullwall
     , fullsand
@@ -48,7 +48,7 @@ tileImages_ =
     ]
 
 
-mkTile : String -> TerrainType -> TerrainType -> TerrainType -> TerrainType -> TileImage
+mkTile : String -> TerrainType -> TerrainType -> TerrainType -> TerrainType -> Tile
 mkTile filename t0 t1 t2 t3 =
     { filename = filename
     , sockets = mkSockets t0 t1 t2 t3
@@ -64,52 +64,52 @@ mkSockets t0 t1 t2 t3 =
     }
 
 
-fullwall : TileImage
+fullwall : Tile
 fullwall =
     mkTile "full_wall.jpg" Wall Wall Wall Wall
 
 
-fullsand : TileImage
+fullsand : Tile
 fullsand =
     mkTile "full_sand.jpg" Sand Sand Sand Sand
 
 
-wall_left : TileImage
+wall_left : Tile
 wall_left =
     mkTile "wall_left.jpg" Wall Wall Sand Sand
 
 
-wall_right : TileImage
+wall_right : Tile
 wall_right =
     mkTile "wall_right.jpg" Sand Sand Wall Wall
 
 
-wall_bottom : TileImage
+wall_bottom : Tile
 wall_bottom =
     mkTile "wall_bottom.jpg" Sand Wall Wall Sand
 
 
-wall_top : TileImage
+wall_top : Tile
 wall_top =
     mkTile "wall_top.jpg" Wall Sand Sand Wall
 
 
-wall_top_left : TileImage
+wall_top_left : Tile
 wall_top_left =
     mkTile "wall_top_left.jpg" Wall Sand Sand Sand
 
 
-wall_top_right : TileImage
+wall_top_right : Tile
 wall_top_right =
     mkTile "wall_top_right.jpg" Sand Sand Sand Wall
 
 
-wall_bottom_left : TileImage
+wall_bottom_left : Tile
 wall_bottom_left =
     mkTile "wall_bottom_left.jpg" Sand Wall Sand Sand
 
 
-wall_bottom_right : TileImage
+wall_bottom_right : Tile
 wall_bottom_right =
     mkTile "wall_bottom_right.jpg" Sand Sand Wall Sand
 
@@ -132,7 +132,7 @@ main =
 -- MODEL
 
 
-tilesDefinition : TilesDefinition TileImage
+tilesDefinition : TilesDefinition Tile
 tilesDefinition =
     { defaultTile = fullsand
     , tileImages = tileImages_
@@ -259,7 +259,7 @@ viewTiles =
     div [ class "examples" ] <| List.indexedMap f tileImages_
 
 
-viewPropGrid : WaveFunctionCollapse.Model TileImage -> Html Msg
+viewPropGrid : WaveFunctionCollapse.Model Tile -> Html Msg
 viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
     let
         rows =
