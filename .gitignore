@@ -2,3 +2,5 @@ elm.js
 **/.DS_Store
 tmp
 elm-stuff
+example/elm.js
+example/elm-stuff
