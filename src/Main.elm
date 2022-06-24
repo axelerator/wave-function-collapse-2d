@@ -36,6 +36,11 @@ type alias Tile =
     }
 
 
+type TerrainType
+    = Sand
+    | Wall
+
+
 type alias Sockets =
     { top : Socket
     , left : Socket

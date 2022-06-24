@@ -3,7 +3,6 @@ module WaveFunctionCollapse exposing
     , Model
     , PropagationTile(..)
     , RandomPick
-    , TerrainType(..)
     , TilesDefinition
     , done
     , init
@@ -110,11 +109,6 @@ type alias ModelDetails tileT socketT =
     , openSteps : List PropStep
     , tilesDefinition : TilesDefinition tileT socketT
     }
-
-
-type TerrainType
-    = Sand
-    | Wall
 
 
 type Direction
