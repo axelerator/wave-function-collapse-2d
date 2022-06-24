@@ -6,7 +6,6 @@ module WaveFunctionCollapse exposing
     , Socket
     , Sockets
     , TerrainType(..)
-    , Tile
     , TilesDefinition
     , done
     , init
@@ -116,12 +115,6 @@ type alias ModelDetails tileT =
 type TerrainType
     = Sand
     | Wall
-
-
-type alias Tile =
-    { filename : String
-    , sockets : Sockets
-    }
 
 
 type Direction

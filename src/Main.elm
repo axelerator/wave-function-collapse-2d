@@ -33,6 +33,12 @@ type Mode
     | AutoStep
 
 
+type alias Tile =
+    { filename : String
+    , sockets : Sockets
+    }
+
+
 tileImages_ : List Tile
 tileImages_ =
     [ fullwall
