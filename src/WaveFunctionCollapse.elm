@@ -243,7 +243,7 @@ nextCandidates { propGrid, tilesDefinition } =
                         , currentLength
                         )
     in
-    Tuple.first <| Grid.foldr f ( [], List.length tilesDefinition.tiles ) gridWithIdx
+    Tuple.first <| Grid.foldr f ( [], List.length tilesDefinition.tiles + 1 ) gridWithIdx
 
 
 pickRandom : RandomPick -> ModelDetails tileT socketT -> ModelDetails tileT socketT
