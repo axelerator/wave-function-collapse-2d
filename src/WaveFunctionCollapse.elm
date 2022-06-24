@@ -1,14 +1,18 @@
 module WaveFunctionCollapse exposing (..)
 
 import Grid exposing (Grid)
-import Random
 
 
 type alias Model =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
-    , mode : Mode
-    , speed : Int
+    }
+
+
+init : Int -> Int -> Model
+init w h =
+    { propGrid = Grid.repeat w h superposition
+    , openSteps = []
     }
 
 
@@ -149,7 +153,13 @@ type PropStep
     = PickTile Pos TileId
     | PickRandomTile Pos
     | KeepOnlyMatching Pos Pos
-    | ChooseRandom
+
+
+pickTile : Pos -> TileId -> Model -> Model
+pickTile pos tileId model =
+    { model
+        | openSteps = PickTile pos tileId :: model.openSteps
+    }
 
 
 superposition : PropagationTile
@@ -237,49 +247,53 @@ canDock dockDir dockSocket dockTileId =
     currentSocket == dockSocket
 
 
-processStep : Mode -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
-processStep mode step grid =
+
+{-
+   ChooseRandom ->
+       let
+           gridWithIdx =
+               Grid.indexedMap (\x y t -> ( x, y, t )) grid
+
+           f ( x, y, t ) best =
+               case t of
+                   Fixed _ ->
+                       best
+
+                   Superposition options ->
+                       let
+                           currentLength =
+                               List.length options
+                       in
+                       case best of
+                           Nothing ->
+                               Just ( x, y, currentLength )
+
+                           Just (( _, _, bestLength ) as prev) ->
+                               if currentLength < bestLength then
+                                   Just ( x, y, currentLength )
+
+                               else
+                                   Just prev
+
+           bestNextTile =
+               Grid.foldr f Nothing gridWithIdx
+       in
+       case bestNextTile of
+           Just ( x, y, optionCount ) ->
+               ( [ PickRandomTile ( x, y ) ]
+               , grid
+               )
+
+           Nothing ->
+               ( []
+               , grid
+               )
+-}
+
+
+processStep : PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
+processStep step grid =
     case step of
-        ChooseRandom ->
-            let
-                gridWithIdx =
-                    Grid.indexedMap (\x y t -> ( x, y, t )) grid
-
-                f ( x, y, t ) best =
-                    case t of
-                        Fixed _ ->
-                            best
-
-                        Superposition options ->
-                            let
-                                currentLength =
-                                    List.length options
-                            in
-                            case best of
-                                Nothing ->
-                                    Just ( x, y, currentLength )
-
-                                Just (( _, _, bestLength ) as prev) ->
-                                    if currentLength < bestLength then
-                                        Just ( x, y, currentLength )
-
-                                    else
-                                        Just prev
-
-                bestNextTile =
-                    Grid.foldr f Nothing gridWithIdx
-            in
-            case bestNextTile of
-                Just ( x, y, optionCount ) ->
-                    ( [ PickRandomTile ( x, y ) ]
-                    , grid
-                    )
-
-                Nothing ->
-                    ( []
-                    , grid
-                    )
-
         PickRandomTile pos ->
             let
                 nextSteps =
@@ -306,16 +320,8 @@ processStep mode step grid =
 
                 nextSteps =
                     List.map mkStep allDirections
-
-                autoProgress =
-                    case mode of
-                        AutoStep ->
-                            [ ChooseRandom ]
-
-                        _ ->
-                            []
             in
-            ( nextSteps ++ autoProgress
+            ( nextSteps
             , Grid.set pos (Fixed tileId) grid
             )
 
@@ -357,7 +363,7 @@ propagate model =
         step :: otherSteps ->
             let
                 ( additionalSteps, nextGrid ) =
-                    processStep model.mode step model.propGrid
+                    processStep step model.propGrid
             in
             { model
                 | propGrid = nextGrid
@@ -365,12 +371,26 @@ propagate model =
             }
 
         _ ->
-            { model | mode = Manual }
+            model
 
 
-propGrid : Int -> Int -> PropagationGrid
-propGrid w h =
-    Grid.repeat w h superposition
+stopped : Model -> Bool
+stopped { openSteps } =
+    List.isEmpty openSteps
+
+
+done : Model -> Bool
+done { propGrid } =
+    let
+        f t onlyFixedTiles =
+            case t of
+                Superposition _ ->
+                    False
+
+                Fixed _ ->
+                    onlyFixedTiles
+    in
+    Grid.foldr f True propGrid
 
 
 tileById : Int -> TileImage

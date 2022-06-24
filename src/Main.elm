@@ -19,6 +19,13 @@ type Msg
     | Slower
 
 
+type alias Model =
+    { wfModel : WaveFunctionCollapse.Model
+    , mode : Mode
+    , speed : Int
+    }
+
+
 
 -- MAIN
 
@@ -39,8 +46,7 @@ main =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { propGrid = propGrid 15 15
-      , openSteps = []
+    ( { wfModel = WaveFunctionCollapse.init 5 5
       , mode = Manual
       , speed = 200
       }
@@ -56,15 +62,12 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Pick nextMode pos tileId ->
-            ( { model
-                | openSteps = [ PickTile pos tileId ]
-                , mode = nextMode
-              }
+            ( { model | wfModel = WaveFunctionCollapse.pickTile pos tileId model.wfModel }
             , Cmd.none
             )
 
         Step ->
-            ( propagate model
+            ( { model | wfModel = propagate model.wfModel }
             , Cmd.none
             )
 
@@ -121,7 +124,7 @@ view model =
             , button [ onClick Faster ] [ text "+" ]
             , modeView
             ]
-        , viewPropGrid model.propGrid
+        , viewPropGrid model.wfModel
         , viewTiles
         ]
 
@@ -135,11 +138,11 @@ viewTiles =
     div [ class "examples" ] <| List.indexedMap f tileImages
 
 
-viewPropGrid : PropagationGrid -> Html Msg
-viewPropGrid grid =
+viewPropGrid : WaveFunctionCollapse.Model -> Html Msg
+viewPropGrid { propGrid } =
     let
         rows =
-            Grid.rows grid
+            Grid.rows propGrid
 
         mkNum options pos i =
             let
