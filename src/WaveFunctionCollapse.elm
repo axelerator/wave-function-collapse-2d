@@ -1,7 +1,6 @@
 module WaveFunctionCollapse exposing
     ( Direction(..)
-    , Model(..)
-    , ModelDetails
+    , Model
     , PropagationTile(..)
     , RandomPick
     , TerrainType(..)
