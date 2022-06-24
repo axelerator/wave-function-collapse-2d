@@ -4,7 +4,7 @@ import Array
 import Browser
 import Grid
 import Html exposing (Html, br, button, div, img, text)
-import Html.Attributes exposing (class, src, style)
+import Html.Attributes exposing (class, default, src, style)
 import Html.Events exposing (onClick)
 import Random
 import String exposing (fromInt)
@@ -132,9 +132,18 @@ main =
 -- MODEL
 
 
+tilesDefinition : TilesDefinition
+tilesDefinition =
+    { defaultTile = fullsand
+    , tileImages = tileImages_
+    , width = 5
+    , height = 5
+    }
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { wfModel = WaveFunctionCollapse.init fullsand tileImages_ 5 5
+    ( { wfModel = WaveFunctionCollapse.init tilesDefinition
       , mode = Manual
       , speed = 200
       }

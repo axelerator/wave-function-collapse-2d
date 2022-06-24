@@ -7,6 +7,7 @@ module WaveFunctionCollapse exposing
     , Sockets
     , TerrainType(..)
     , TileImage
+    , TilesDefinition
     , done
     , imageForTile
     , init
@@ -87,10 +88,18 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
                 ( model, Cmd.none )
 
 
-init : TileImage -> List TileImage -> Int -> Int -> Model
-init defaultTile tileImages w h =
+type alias TilesDefinition =
+    { defaultTile : TileImage
+    , tileImages : List TileImage
+    , width : Int
+    , height : Int
+    }
+
+
+init : TilesDefinition -> Model
+init { defaultTile, tileImages, width, height } =
     Model
-        { propGrid = Grid.repeat w h (superposition tileImages)
+        { propGrid = Grid.repeat width height (superposition tileImages)
         , openSteps = []
         , tileImages = tileImages
         , defaultTile = defaultTile
