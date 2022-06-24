@@ -22,7 +22,7 @@ type Msg
 
 
 type alias Model =
-    { wfModel : WaveFunctionCollapse.Model
+    { wfModel : WaveFunctionCollapse.Model TileImage
     , mode : Mode
     , speed : Int
     }
@@ -132,12 +132,13 @@ main =
 -- MODEL
 
 
-tilesDefinition : TilesDefinition
+tilesDefinition : TilesDefinition TileImage
 tilesDefinition =
     { defaultTile = fullsand
     , tileImages = tileImages_
     , width = 5
     , height = 5
+    , socketsFor = \tile -> tile.sockets
     }
 
 
@@ -258,7 +259,7 @@ viewTiles =
     div [ class "examples" ] <| List.indexedMap f tileImages_
 
 
-viewPropGrid : WaveFunctionCollapse.Model -> Html Msg
+viewPropGrid : WaveFunctionCollapse.Model TileImage -> Html Msg
 viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
     let
         rows =
@@ -280,7 +281,7 @@ viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
                 Fixed i ->
                     let
                         filename =
-                            WaveFunctionCollapse.imageForTile wfModel i
+                            imageForTile i
                     in
                     div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] []
 
@@ -293,3 +294,13 @@ viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
             div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles
     in
     div [] <| Array.toList <| Array.indexedMap viewRow rows
+
+
+imageForTile : Int -> String
+imageForTile i =
+    case List.head <| List.drop i tileImages_ of
+        Nothing ->
+            fullsand.filename
+
+        Just aTile ->
+            aTile.filename
