@@ -85,7 +85,7 @@ propagate requestRandom maybeRandom ((Model modelDetails) as model) =
 
 type alias TilesDefinition tileT =
     { defaultTile : tileT
-    , tileImages : List tileT
+    , tiles : List tileT
     , width : Int
     , height : Int
     , socketsFor : tileT -> Sockets
@@ -93,9 +93,9 @@ type alias TilesDefinition tileT =
 
 
 init : TilesDefinition tileT -> Model tileT
-init ({ width, height, tileImages } as tilesDefinition) =
+init ({ width, height, tiles } as tilesDefinition) =
     Model
-        { propGrid = Grid.repeat width height (superposition tileImages)
+        { propGrid = Grid.repeat width height (superposition tiles)
         , openSteps = []
         , tilesDefinition = tilesDefinition
         }
@@ -278,7 +278,7 @@ nextCandidates { propGrid, tilesDefinition } =
                         , currentLength
                         )
     in
-    Tuple.first <| Grid.foldr f ( [], List.length tilesDefinition.tileImages ) gridWithIdx
+    Tuple.first <| Grid.foldr f ( [], List.length tilesDefinition.tiles ) gridWithIdx
 
 
 pickRandom : RandomPick -> ModelDetails tileT -> ModelDetails tileT
@@ -374,7 +374,7 @@ randomTileAndTileIdGen { tilesDefinition, propGrid } =
         tileCount =
             Grid.width propGrid * Grid.height propGrid
     in
-    Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tilesDefinition.tileImages))
+    Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tilesDefinition.tiles))
 
 
 mkRandom : (RandomPick -> msg) -> ModelDetails tileT -> Cmd msg
@@ -384,7 +384,7 @@ mkRandom mkMsg modelDetails =
 
 tileById : ModelDetails tileT -> Int -> tileT
 tileById { tilesDefinition } i =
-    case List.head <| List.drop i tilesDefinition.tileImages of
+    case List.head <| List.drop i tilesDefinition.tiles of
         Nothing ->
             tilesDefinition.defaultTile
 

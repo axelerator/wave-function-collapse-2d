@@ -141,7 +141,7 @@ main =
 tilesDefinition : TilesDefinition Tile
 tilesDefinition =
     { defaultTile = fullsand
-    , tileImages = tileImages_
+    , tiles = tileImages_
     , width = 5
     , height = 5
     , socketsFor = \tile -> tile.sockets
