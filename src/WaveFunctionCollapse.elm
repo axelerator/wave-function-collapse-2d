@@ -6,7 +6,71 @@ import Html.Events exposing (custom)
 import Random
 
 
-type alias Model =
+type Model
+    = Model ModelDetails
+
+
+pickTile : Pos -> TileId -> Model -> Model
+pickTile pos tileId (Model model) =
+    Model
+        { model
+            | openSteps = PickTile pos tileId :: model.openSteps
+        }
+
+
+stopped : Model -> Bool
+stopped (Model { openSteps }) =
+    List.isEmpty openSteps
+
+
+done : Model -> Bool
+done (Model { propGrid }) =
+    let
+        f t onlyFixedTiles =
+            case t of
+                Superposition _ ->
+                    False
+
+                Fixed _ ->
+                    onlyFixedTiles
+    in
+    Grid.foldr f True propGrid
+
+
+propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model -> ( Model, Cmd msg )
+propagate requestRandom maybeRandom ((Model modelDetails) as model) =
+    case modelDetails.openSteps of
+        step :: otherSteps ->
+            let
+                ( additionalSteps, nextGrid ) =
+                    processStep step modelDetails.propGrid
+            in
+            ( Model
+                { modelDetails
+                    | propGrid = nextGrid
+                    , openSteps = otherSteps ++ additionalSteps
+                }
+            , Cmd.none
+            )
+
+        [] ->
+            if not (done model) then
+                case maybeRandom of
+                    Just randomPick ->
+                        ( Model <| pickRandom randomPick modelDetails
+                        , Cmd.none
+                        )
+
+                    Nothing ->
+                        ( model
+                        , mkRandom requestRandom modelDetails
+                        )
+
+            else
+                ( model, Cmd.none )
+
+
+type alias ModelDetails =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
     }
@@ -14,9 +78,10 @@ type alias Model =
 
 init : Int -> Int -> Model
 init w h =
-    { propGrid = Grid.repeat w h superposition
-    , openSteps = []
-    }
+    Model
+        { propGrid = Grid.repeat w h superposition
+        , openSteps = []
+        }
 
 
 type Mode
@@ -157,13 +222,6 @@ type PropStep
     | KeepOnlyMatching Pos Pos
 
 
-pickTile : Pos -> TileId -> Model -> Model
-pickTile pos tileId model =
-    { model
-        | openSteps = PickTile pos tileId :: model.openSteps
-    }
-
-
 superposition : PropagationTile
 superposition =
     Superposition <| List.range 0 (List.length tileImages)
@@ -255,7 +313,7 @@ type alias Candidate =
     }
 
 
-nextCandidates : Model -> List Candidate
+nextCandidates : ModelDetails -> List Candidate
 nextCandidates { propGrid } =
     let
         gridWithIdx =
@@ -287,11 +345,11 @@ nextCandidates { propGrid } =
     Tuple.first <| Grid.foldr f ( [], List.length tileImages ) gridWithIdx
 
 
-pickRandom : RandomPick -> Model -> Model
-pickRandom (RandomPick ( posRand, tileRand )) model =
+pickRandom : RandomPick -> ModelDetails -> ModelDetails
+pickRandom (RandomPick ( posRand, tileRand )) modelDetails =
     let
         candidates =
-            nextCandidates model
+            nextCandidates modelDetails
 
         pickRandomStep =
             if List.isEmpty candidates then
@@ -318,8 +376,8 @@ pickRandom (RandomPick ( posRand, tileRand )) model =
                     Nothing ->
                         []
     in
-    { model
-        | openSteps = pickRandomStep ++ model.openSteps
+    { modelDetails
+        | openSteps = pickRandomStep ++ modelDetails.openSteps
     }
 
 
@@ -374,7 +432,7 @@ type RandomPick
     = RandomPick ( Int, Int )
 
 
-randomTileAndTileIdGen : Model -> Random.Generator ( Int, Int )
+randomTileAndTileIdGen : ModelDetails -> Random.Generator ( Int, Int )
 randomTileAndTileIdGen { propGrid } =
     let
         tileCount =
@@ -383,60 +441,9 @@ randomTileAndTileIdGen { propGrid } =
     Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tileImages))
 
 
-mkRandom : (RandomPick -> msg) -> Model -> Cmd msg
-mkRandom mkMsg model =
-    Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen model)
-
-
-propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model -> ( Model, Cmd msg )
-propagate requestRandom maybeRandom model =
-    case model.openSteps of
-        step :: otherSteps ->
-            let
-                ( additionalSteps, nextGrid ) =
-                    processStep step model.propGrid
-            in
-            ( { model
-                | propGrid = nextGrid
-                , openSteps = otherSteps ++ additionalSteps
-              }
-            , Cmd.none
-            )
-
-        [] ->
-            if not (done model) then
-                case maybeRandom of
-                    Just randomPick ->
-                        ( pickRandom randomPick model
-                        , Cmd.none
-                        )
-
-                    Nothing ->
-                        ( model
-                        , mkRandom requestRandom model
-                        )
-
-            else
-                ( model, Cmd.none )
-
-
-stopped : Model -> Bool
-stopped { openSteps } =
-    List.isEmpty openSteps
-
-
-done : Model -> Bool
-done { propGrid } =
-    let
-        f t onlyFixedTiles =
-            case t of
-                Superposition _ ->
-                    False
-
-                Fixed _ ->
-                    onlyFixedTiles
-    in
-    Grid.foldr f True propGrid
+mkRandom : (RandomPick -> msg) -> ModelDetails -> Cmd msg
+mkRandom mkMsg modelDetails =
+    Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen modelDetails)
 
 
 tileById : Int -> TileImage

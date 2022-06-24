@@ -164,7 +164,7 @@ viewTiles =
 
 
 viewPropGrid : WaveFunctionCollapse.Model -> Html Msg
-viewPropGrid { propGrid } =
+viewPropGrid (WaveFunctionCollapse.Model { propGrid }) =
     let
         rows =
             Grid.rows propGrid
