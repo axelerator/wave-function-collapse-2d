@@ -6,6 +6,7 @@ import Grid
 import Html exposing (Html, br, button, div, img, text)
 import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
+import Random
 import String exposing (fromInt)
 import Time
 import WaveFunctionCollapse exposing (..)
@@ -17,6 +18,7 @@ type Msg
     | Play
     | Faster
     | Slower
+    | GotRandom WaveFunctionCollapse.RandomPick
 
 
 type alias Model =
@@ -67,8 +69,12 @@ update msg model =
             )
 
         Step ->
-            ( { model | wfModel = propagate model.wfModel }
-            , Cmd.none
+            let
+                ( wfModel, cmd ) =
+                    propagate GotRandom Nothing model.wfModel
+            in
+            ( { model | wfModel = wfModel }
+            , cmd
             )
 
         Play ->
@@ -84,6 +90,15 @@ update msg model =
         Slower ->
             ( { model | speed = model.speed * 2 }
             , Cmd.none
+            )
+
+        GotRandom randomPick ->
+            let
+                ( wfModel, cmd ) =
+                    propagate GotRandom (Just randomPick) model.wfModel
+            in
+            ( { model | wfModel = wfModel }
+            , cmd
             )
 
 

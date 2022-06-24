@@ -1,6 +1,9 @@
 module WaveFunctionCollapse exposing (..)
 
 import Grid exposing (Grid)
+import Html exposing (option)
+import Html.Events exposing (custom)
+import Random
 
 
 type alias Model =
@@ -151,7 +154,6 @@ type alias Pos =
 
 type PropStep
     = PickTile Pos TileId
-    | PickRandomTile Pos
     | KeepOnlyMatching Pos Pos
 
 
@@ -247,72 +249,83 @@ canDock dockDir dockSocket dockTileId =
     currentSocket == dockSocket
 
 
+type alias Candidate =
+    { pos : Pos
+    , options : List TileId
+    }
 
-{-
-   ChooseRandom ->
-       let
-           gridWithIdx =
-               Grid.indexedMap (\x y t -> ( x, y, t )) grid
 
-           f ( x, y, t ) best =
-               case t of
-                   Fixed _ ->
-                       best
+nextCandidates : Model -> List Candidate
+nextCandidates { propGrid } =
+    let
+        gridWithIdx =
+            Grid.indexedMap (\x y t -> ( x, y, t )) propGrid
 
-                   Superposition options ->
-                       let
-                           currentLength =
-                               List.length options
-                       in
-                       case best of
-                           Nothing ->
-                               Just ( x, y, currentLength )
+        f ( x, y, t ) ( candidates, length ) =
+            case t of
+                Fixed _ ->
+                    ( candidates, length )
 
-                           Just (( _, _, bestLength ) as prev) ->
-                               if currentLength < bestLength then
-                                   Just ( x, y, currentLength )
+                Superposition options ->
+                    let
+                        currentLength =
+                            List.length options
+                    in
+                    if currentLength > length then
+                        ( candidates, length )
 
-                               else
-                                   Just prev
+                    else if currentLength < length then
+                        ( [ { pos = ( x, y ), options = options } ]
+                        , currentLength
+                        )
 
-           bestNextTile =
-               Grid.foldr f Nothing gridWithIdx
-       in
-       case bestNextTile of
-           Just ( x, y, optionCount ) ->
-               ( [ PickRandomTile ( x, y ) ]
-               , grid
-               )
+                    else
+                        ( { pos = ( x, y ), options = options } :: candidates
+                        , currentLength
+                        )
+    in
+    Tuple.first <| Grid.foldr f ( [], List.length tileImages ) gridWithIdx
 
-           Nothing ->
-               ( []
-               , grid
-               )
--}
+
+pickRandom : RandomPick -> Model -> Model
+pickRandom (RandomPick ( posRand, tileRand )) model =
+    let
+        candidates =
+            nextCandidates model
+
+        pickRandomStep =
+            if List.isEmpty candidates then
+                []
+
+            else
+                let
+                    randomCandidate =
+                        List.head <| List.drop (modBy (List.length candidates) posRand) candidates
+                in
+                case randomCandidate of
+                    Just { pos, options } ->
+                        let
+                            randomTileId =
+                                List.head <| List.drop (modBy (List.length options) tileRand) options
+                        in
+                        case randomTileId of
+                            Just tileId ->
+                                [ PickTile pos tileId ]
+
+                            Nothing ->
+                                []
+
+                    Nothing ->
+                        []
+    in
+    { model
+        | openSteps = pickRandomStep ++ model.openSteps
+    }
 
 
 processStep : PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
 processStep step grid =
     case step of
-        PickRandomTile pos ->
-            let
-                nextSteps =
-                    case Grid.get pos grid of
-                        Just (Superposition options) ->
-                            case List.head options of
-                                Just aTileId ->
-                                    [ PickTile pos aTileId ]
-
-                                Nothing ->
-                                    []
-
-                        _ ->
-                            []
-            in
-            ( nextSteps
-            , grid
-            )
-
         PickTile pos tileId ->
             let
                 mkStep dir =
@@ -357,21 +370,54 @@ processStep step grid =
                     ( [], grid )
 
 
-propagate : Model -> Model
-propagate model =
+type RandomPick
+    = RandomPick ( Int, Int )
+
+
+randomTileAndTileIdGen : Model -> Random.Generator ( Int, Int )
+randomTileAndTileIdGen { propGrid } =
+    let
+        tileCount =
+            Grid.width propGrid * Grid.height propGrid
+    in
+    Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tileImages))
+
+
+mkRandom : (RandomPick -> msg) -> Model -> Cmd msg
+mkRandom mkMsg model =
+    Random.generate (\numbers -> mkMsg (RandomPick numbers)) (randomTileAndTileIdGen model)
+
+
+propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model -> ( Model, Cmd msg )
+propagate requestRandom maybeRandom model =
     case model.openSteps of
         step :: otherSteps ->
             let
                 ( additionalSteps, nextGrid ) =
                     processStep step model.propGrid
             in
-            { model
+            ( { model
                 | propGrid = nextGrid
                 , openSteps = otherSteps ++ additionalSteps
-            }
+              }
+            , Cmd.none
+            )
 
-        _ ->
-            model
+        [] ->
+            if not (done model) then
+                case maybeRandom of
+                    Just randomPick ->
+                        ( pickRandom randomPick model
+                        , Cmd.none
+                        )
+
+                    Nothing ->
+                        ( model
+                        , mkRandom requestRandom model
+                        )
+
+            else
+                ( model, Cmd.none )
 
 
 stopped : Model -> Bool
