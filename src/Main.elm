@@ -16,6 +16,7 @@ type Msg
     | Play
     | Faster
     | Slower
+    | Solve
 
 
 type alias Model =
@@ -235,6 +236,11 @@ update msg model =
             , Cmd.none
             )
 
+        Solve ->
+            ( { model | wfModel = solve model.wfModel }
+            , Cmd.none
+            )
+
 
 
 -- SUBSCRIPTIONS
@@ -271,6 +277,7 @@ view model =
             , button [ onClick Play ] [ text "play ", text <| fromInt model.speed ]
             , button [ onClick Slower ] [ text "-" ]
             , button [ onClick Faster ] [ text "+" ]
+            , button [ onClick Solve ] [ text "solve" ]
             , modeView
             ]
         , viewPropGrid (Pick Manual) displayTileImage model.wfModel

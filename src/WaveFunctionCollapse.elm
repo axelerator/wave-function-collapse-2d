@@ -7,6 +7,7 @@ module WaveFunctionCollapse exposing
     , init
     , pickTile
     , propagate
+    , solve
     , stopped
     , tileById
     , viewPropGrid
@@ -39,7 +40,7 @@ stopped (Model { openSteps }) =
 
 
 done : Model tileT socketT -> Bool
-done (Model { propGrid }) =
+done ((Model { propGrid }) as model) =
     let
         f t onlyFixedTiles =
             case t of
@@ -49,7 +50,16 @@ done (Model { propGrid }) =
                 Fixed _ ->
                     onlyFixedTiles
     in
-    Grid.foldr f True propGrid
+    stopped model && Grid.foldr f True propGrid
+
+
+solve : Model tileT socketT -> Model tileT socketT
+solve model =
+    if done model then
+        model
+
+    else
+        solve <| propagate model
 
 
 propagate : Model tileT socketT -> Model tileT socketT
