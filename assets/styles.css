@@ -1,0 +1,49 @@
+#build-errors {
+  padding: 1em;
+  background-color: #111;
+  color: #DDD;
+}
+
+#build-errors pre {
+    margin: 0;
+}
+
+.row {
+  display: flex
+}
+
+.row > * {
+  width: 32px;
+  height: 32px;
+}
+
+.superposition {
+  display: flex;
+  flex-wrap: wrap;
+  background-color: #DDD;
+
+}
+.superposition > * {
+  width: 10px;
+  font-size: 7px;
+  line-height: 7px;
+  text-align: center;
+}
+
+.superposition > .off {
+  color: #BBB;
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.examples > * {
+  width: 100px;
+  height: 100px;
+  font-size: 80%;
+  background-size: cover;
+  margin: 10px;
+}
+
