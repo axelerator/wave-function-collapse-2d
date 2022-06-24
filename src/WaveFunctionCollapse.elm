@@ -93,12 +93,10 @@ type alias TilesDefinition tileT =
 
 
 init : TilesDefinition tileT -> Model tileT
-init ({ defaultTile, tileImages, width, height } as tilesDefinition) =
+init ({ width, height, tileImages } as tilesDefinition) =
     Model
         { propGrid = Grid.repeat width height (superposition tileImages)
         , openSteps = []
-        , tileImages = tileImages
-        , defaultTile = defaultTile
         , tilesDefinition = tilesDefinition
         }
 
@@ -106,8 +104,6 @@ init ({ defaultTile, tileImages, width, height } as tilesDefinition) =
 type alias ModelDetails tileT =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
-    , tileImages : List tileT
-    , defaultTile : tileT
     , tilesDefinition : TilesDefinition tileT
     }
 
@@ -254,7 +250,7 @@ type alias Candidate =
 
 
 nextCandidates : ModelDetails tileT -> List Candidate
-nextCandidates { propGrid, tileImages } =
+nextCandidates { propGrid, tilesDefinition } =
     let
         gridWithIdx =
             Grid.indexedMap (\x y t -> ( x, y, t )) propGrid
@@ -282,7 +278,7 @@ nextCandidates { propGrid, tileImages } =
                         , currentLength
                         )
     in
-    Tuple.first <| Grid.foldr f ( [], List.length tileImages ) gridWithIdx
+    Tuple.first <| Grid.foldr f ( [], List.length tilesDefinition.tileImages ) gridWithIdx
 
 
 pickRandom : RandomPick -> ModelDetails tileT -> ModelDetails tileT
@@ -373,12 +369,12 @@ type RandomPick
 
 
 randomTileAndTileIdGen : ModelDetails tileT -> Random.Generator ( Int, Int )
-randomTileAndTileIdGen { propGrid, tileImages } =
+randomTileAndTileIdGen { tilesDefinition, propGrid } =
     let
         tileCount =
             Grid.width propGrid * Grid.height propGrid
     in
-    Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tileImages))
+    Random.pair (Random.int 0 tileCount) (Random.int 0 (List.length tilesDefinition.tileImages))
 
 
 mkRandom : (RandomPick -> msg) -> ModelDetails tileT -> Cmd msg
@@ -387,10 +383,10 @@ mkRandom mkMsg modelDetails =
 
 
 tileById : ModelDetails tileT -> Int -> tileT
-tileById { tileImages, defaultTile } i =
-    case List.head <| List.drop i tileImages of
+tileById { tilesDefinition } i =
+    case List.head <| List.drop i tilesDefinition.tileImages of
         Nothing ->
-            defaultTile
+            tilesDefinition.defaultTile
 
         Just aTile ->
             aTile
