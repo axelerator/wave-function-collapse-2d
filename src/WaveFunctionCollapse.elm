@@ -12,14 +12,6 @@ type alias Model =
     }
 
 
-type Msg
-    = Pick Mode ( Int, Int ) Int
-    | Step
-    | Play
-    | Faster
-    | Slower
-
-
 type Mode
     = Manual
     | AutoStep
@@ -155,6 +147,7 @@ type alias Pos =
 
 type PropStep
     = PickTile Pos TileId
+    | PickRandomTile Pos
     | KeepOnlyMatching Pos Pos
     | ChooseRandom
 
@@ -244,7 +237,7 @@ canDock dockDir dockSocket dockTileId =
     currentSocket == dockSocket
 
 
-processStep : Mode -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid, Cmd Msg )
+processStep : Mode -> PropStep -> PropagationGrid -> ( List PropStep, PropagationGrid )
 processStep mode step grid =
     case step of
         ChooseRandom ->
@@ -275,48 +268,35 @@ processStep mode step grid =
 
                 bestNextTile =
                     Grid.foldr f Nothing gridWithIdx
+            in
+            case bestNextTile of
+                Just ( x, y, optionCount ) ->
+                    ( [ PickRandomTile ( x, y ) ]
+                    , grid
+                    )
 
-                maybePickRandomTile : Cmd Msg
-                maybePickRandomTile =
-                    case bestNextTile of
-                        Just ( x, y, optionCount ) ->
-                            let
-                                tile =
-                                    Grid.get ( x, y ) grid
-                            in
-                            case tile of
-                                Just (Superposition options) ->
-                                    case List.head options of
-                                        Just tileId ->
-                                            let
-                                                max =
-                                                    List.length options - 1
+                Nothing ->
+                    ( []
+                    , grid
+                    )
 
-                                                pickFromRandom i =
-                                                    case List.head <| List.drop i options of
-                                                        Just nextTileId ->
-                                                            Pick mode ( x, y ) nextTileId
+        PickRandomTile pos ->
+            let
+                nextSteps =
+                    case Grid.get pos grid of
+                        Just (Superposition options) ->
+                            case List.head options of
+                                Just aTileId ->
+                                    [ PickTile pos aTileId ]
 
-                                                        Nothing ->
-                                                            Step
-
-                                                fromOptionIdx =
-                                                    Random.int 0 max
-                                            in
-                                            Random.generate pickFromRandom fromOptionIdx
-
-                                        Nothing ->
-                                            Cmd.none
-
-                                _ ->
-                                    Cmd.none
+                                Nothing ->
+                                    []
 
                         _ ->
-                            Cmd.none
+                            []
             in
-            ( []
+            ( nextSteps
             , grid
-            , maybePickRandomTile
             )
 
         PickTile pos tileId ->
@@ -337,7 +317,6 @@ processStep mode step grid =
             in
             ( nextSteps ++ autoProgress
             , Grid.set pos (Fixed tileId) grid
-            , Cmd.none
             )
 
         KeepOnlyMatching from to ->
@@ -366,31 +345,27 @@ processStep mode step grid =
                         updateGrid =
                             Grid.set to (Superposition revisedOptions) grid
                     in
-                    ( [], updateGrid, Cmd.none )
+                    ( [], updateGrid )
 
                 _ ->
-                    ( [], grid, Cmd.none )
+                    ( [], grid )
 
 
-propagate : Model -> ( Model, Cmd Msg )
+propagate : Model -> Model
 propagate model =
     case model.openSteps of
         step :: otherSteps ->
             let
-                ( additionalSteps, nextGrid, cmd ) =
+                ( additionalSteps, nextGrid ) =
                     processStep model.mode step model.propGrid
             in
-            ( { model
+            { model
                 | propGrid = nextGrid
                 , openSteps = otherSteps ++ additionalSteps
-              }
-            , cmd
-            )
+            }
 
         _ ->
-            ( { model | mode = Manual }
-            , Cmd.none
-            )
+            { model | mode = Manual }
 
 
 propGrid : Int -> Int -> PropagationGrid

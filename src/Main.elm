@@ -11,6 +11,14 @@ import Time
 import WaveFunctionCollapse exposing (..)
 
 
+type Msg
+    = Pick Mode ( Int, Int ) Int
+    | Step
+    | Play
+    | Faster
+    | Slower
+
+
 
 -- MAIN
 
@@ -56,7 +64,9 @@ update msg model =
             )
 
         Step ->
-            propagate model
+            ( propagate model
+            , Cmd.none
+            )
 
         Play ->
             ( { model | mode = AutoStep }
