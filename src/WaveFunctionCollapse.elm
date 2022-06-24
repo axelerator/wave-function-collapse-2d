@@ -18,7 +18,7 @@ import Grid exposing (Grid)
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
-import Random
+import Random exposing (Seed)
 import String exposing (fromInt)
 
 
@@ -53,37 +53,34 @@ done (Model { propGrid }) =
     Grid.foldr f True propGrid
 
 
-propagate : (RandomPick -> msg) -> Maybe RandomPick -> Model tileT socketT -> ( Model tileT socketT, Cmd msg )
-propagate requestRandom maybeRandom ((Model modelDetails) as model) =
+propagate : Model tileT socketT -> Model tileT socketT
+propagate ((Model modelDetails) as model) =
     case modelDetails.openSteps of
         step :: otherSteps ->
             let
                 ( additionalSteps, nextGrid ) =
                     processStep modelDetails step modelDetails.propGrid
             in
-            ( Model
+            Model
                 { modelDetails
                     | propGrid = nextGrid
                     , openSteps = otherSteps ++ additionalSteps
                 }
-            , Cmd.none
-            )
 
         [] ->
             if not (done model) then
-                case maybeRandom of
-                    Just randomPick ->
-                        ( Model <| pickRandom randomPick modelDetails
-                        , Cmd.none
-                        )
+                let
+                    ( randomPick, nextSeed ) =
+                        Random.step (randomTileAndTileIdGen modelDetails) modelDetails.seed
 
-                    Nothing ->
-                        ( model
-                        , mkRandom requestRandom modelDetails
-                        )
+                    withPick =
+                        pickRandom (RandomPick randomPick) modelDetails
+                in
+                Model
+                    { withPick | seed = nextSeed }
 
             else
-                ( model, Cmd.none )
+                model
 
 
 type alias TilesDefinition tileT socketT =
@@ -92,6 +89,7 @@ type alias TilesDefinition tileT socketT =
     , width : Int
     , height : Int
     , getSocketIn : tileT -> Direction -> socketT
+    , initialSeed : Seed
     }
 
 
@@ -101,6 +99,7 @@ init ({ width, height, tiles } as tilesDefinition) =
         { propGrid = Grid.repeat width height (superposition tiles)
         , openSteps = []
         , tilesDefinition = tilesDefinition
+        , seed = tilesDefinition.initialSeed
         }
 
 
@@ -108,6 +107,7 @@ type alias ModelDetails tileT socketT =
     { propGrid : PropagationGrid
     , openSteps : List PropStep
     , tilesDefinition : TilesDefinition tileT socketT
+    , seed : Seed
     }
 
 

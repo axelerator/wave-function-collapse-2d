@@ -4,6 +4,7 @@ import Browser
 import Html exposing (Html, br, button, div, text)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
+import Random
 import String exposing (fromInt)
 import Time
 import WaveFunctionCollapse exposing (..)
@@ -15,7 +16,6 @@ type Msg
     | Play
     | Faster
     | Slower
-    | GotRandom WaveFunctionCollapse.RandomPick
 
 
 type alias Model =
@@ -159,6 +159,7 @@ tilesDefinition =
     , width = 5
     , height = 5
     , getSocketIn = getSocketIn
+    , initialSeed = Random.initialSeed 0
     }
 
 
@@ -202,8 +203,8 @@ update msg model =
 
         Step ->
             let
-                ( wfModel, cmd ) =
-                    propagate GotRandom Nothing model.wfModel
+                wfModel =
+                    propagate model.wfModel
 
                 mode =
                     if WaveFunctionCollapse.done model.wfModel then
@@ -216,7 +217,7 @@ update msg model =
                 | wfModel = wfModel
                 , mode = mode
               }
-            , cmd
+            , Cmd.none
             )
 
         Play ->
@@ -232,15 +233,6 @@ update msg model =
         Slower ->
             ( { model | speed = model.speed * 2 }
             , Cmd.none
-            )
-
-        GotRandom randomPick ->
-            let
-                ( wfModel, cmd ) =
-                    propagate GotRandom (Just randomPick) model.wfModel
-            in
-            ( { model | wfModel = wfModel }
-            , cmd
             )
 
 
