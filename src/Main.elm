@@ -279,9 +279,13 @@ view model =
             , button [ onClick Faster ] [ text "+" ]
             , modeView
             ]
-        , viewPropGrid model.wfModel
+        , viewPropGrid (Pick Manual) displayTileImage model.wfModel
         , viewTiles
         ]
+
+
+displayTileImage { filename } =
+    div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] []
 
 
 viewTiles : Html msg
@@ -291,43 +295,6 @@ viewTiles =
             div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] [ text <| fromInt i, br [] [], text filename ]
     in
     div [ class "examples" ] <| List.indexedMap f tileImages_
-
-
-viewPropGrid : WaveFunctionCollapse.Model Tile Socket -> Html Msg
-viewPropGrid ((WaveFunctionCollapse.Model { propGrid }) as wfModel) =
-    let
-        rows =
-            Grid.rows propGrid
-
-        mkNum options pos i =
-            let
-                attrs =
-                    if List.member i options then
-                        [ onClick (Pick Manual pos i) ]
-
-                    else
-                        [ class "off" ]
-            in
-            div attrs [ text <| fromInt i ]
-
-        viewTile row col propTile =
-            case propTile of
-                Fixed i ->
-                    let
-                        filename =
-                            imageForTile i
-                    in
-                    div [ style "background-image" ("url(assets/tiles/" ++ filename ++ ")") ] []
-
-                Superposition options ->
-                    div [ class "superposition" ] <|
-                        List.map (mkNum options ( col, row )) <|
-                            List.range 0 (List.length tileImages_)
-
-        viewRow row tiles =
-            div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles
-    in
-    div [] <| Array.toList <| Array.indexedMap viewRow rows
 
 
 imageForTile : Int -> String

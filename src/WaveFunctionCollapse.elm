@@ -12,10 +12,16 @@ module WaveFunctionCollapse exposing
     , propagate
     , stopped
     , tileById
+    , viewPropGrid
     )
 
+import Array
 import Grid exposing (Grid)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
+import Html.Events exposing (onClick)
 import Random
+import String exposing (fromInt)
 
 
 type Model tileT socketT
@@ -357,3 +363,38 @@ tileById { tilesDefinition } i =
 
         Just aTile ->
             aTile
+
+
+viewPropGrid : (Pos -> TileId -> msg) -> (tileT -> Html msg) -> Model tileT socketT -> Html msg
+viewPropGrid pickMsg displayTile ((Model { propGrid, tilesDefinition }) as wfModel) =
+    let
+        mkNum options pos i =
+            let
+                attrs =
+                    if List.member i options then
+                        [ onClick (pickMsg pos i) ]
+
+                    else
+                        [ class "off" ]
+            in
+            div attrs [ text <| fromInt i ]
+
+        viewTile row col propTile =
+            case propTile of
+                Fixed i ->
+                    case List.head <| List.drop i tilesDefinition.tiles of
+                        Just aTile ->
+                            displayTile aTile
+
+                        _ ->
+                            displayTile tilesDefinition.defaultTile
+
+                Superposition options ->
+                    div [ class "superposition" ] <|
+                        List.map (mkNum options ( col, row )) <|
+                            List.range 0 (List.length tilesDefinition.tiles)
+
+        viewRow row tiles =
+            div [ class "row" ] <| Array.toList <| Array.indexedMap (viewTile row) tiles
+    in
+    div [] <| Array.toList <| Array.indexedMap viewRow <| Grid.rows propGrid
