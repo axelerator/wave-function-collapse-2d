@@ -6,7 +6,7 @@ import Grid exposing (Grid)
 import Html exposing (Html, br, button, div, text)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (onClick)
-import Random exposing (initialSeed)
+import Random
 import String exposing (fromInt)
 import Task
 import Time
@@ -162,8 +162,8 @@ tilesDefinition : TilesDefinition Tile Socket
 tilesDefinition =
     { defaultTile = fullsand
     , tiles = tileImages_
-    , width = 5
-    , height = 5
+    , width = 7
+    , height = 7
     , getSocketIn = getSocketIn
     , initialSeed = Random.initialSeed 0
     }

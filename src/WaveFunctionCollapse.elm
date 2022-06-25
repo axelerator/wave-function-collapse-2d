@@ -194,7 +194,7 @@ to the app).
 For positions that have not been assigned a tile yet this will show which tile (ids) can still be picked.
 -}
 viewPropGrid : (Pos -> TileId -> msg) -> (tileT -> Html msg) -> Model tileT socketT -> Html msg
-viewPropGrid pickMsg displayTile (Model { propGrid, tilesDefinition }) =
+viewPropGrid pickMsg displayTile (Model ({ propGrid, tilesDefinition } as modelDetails)) =
     let
         mkNum options pos i =
             let
@@ -204,8 +204,11 @@ viewPropGrid pickMsg displayTile (Model { propGrid, tilesDefinition }) =
 
                     else
                         [ class "off" ]
+
+                displayTileFromIndex =
+                    displayTile <| tileById modelDetails i
             in
-            div attrs [ text <| fromInt i ]
+            div attrs [ displayTileFromIndex ]
 
         viewTile row col propTile =
             case propTile of
@@ -218,6 +221,10 @@ viewPropGrid pickMsg displayTile (Model { propGrid, tilesDefinition }) =
                             displayTile tilesDefinition.defaultTile
 
                 Superposition options ->
+                    let
+                        f i =
+                            displayTile <| tileById modelDetails i
+                    in
                     div [ class "superposition" ] <|
                         List.map (mkNum options ( col, row )) <|
                             List.range 0 (List.length tilesDefinition.tiles)
