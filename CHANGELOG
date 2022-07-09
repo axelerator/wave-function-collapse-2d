@@ -1,0 +1,5 @@
+# Changelog
+
+## 1.0.3 (09-Jul-22)
+
+- merged a fix from @tankorsmash to avoid stack overflow

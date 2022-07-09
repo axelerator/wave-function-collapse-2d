@@ -3,7 +3,7 @@
     "name": "axelerator/wave-function-collapse-2d",
     "summary": "Random maps from custom tiles using the wave function collapse algorithm",
     "license": "MIT",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "exposed-modules": [
         "WaveFunctionCollapse"
     ],
