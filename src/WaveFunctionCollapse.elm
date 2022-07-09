@@ -132,7 +132,11 @@ solve : TilesDefinition tileT socketT -> Grid tileT
 solve tilesDefinition =
     let
         (Model { propGrid }) =
-            solve_ <| propagate <| init tilesDefinition
+            let
+                nextModel =
+                    propagate <| init tilesDefinition
+            in
+            solve_ (done <| nextModel) nextModel
 
         convert propagationTile =
             case propagationTile of
@@ -145,13 +149,13 @@ solve tilesDefinition =
     Grid.map convert propGrid
 
 
-solve_ : Model tileT socketT -> Model tileT socketT
-solve_ model =
-    if done model then
+solve_ : Bool -> Model tileT socketT -> Model tileT socketT
+solve_ isDone model =
+    if isDone then
         model
 
     else
-        solve_ <| propagate model
+        solve_ (done model) (propagate model)
 
 
 {-| Execute a single step. This can mean picking the next random tile
